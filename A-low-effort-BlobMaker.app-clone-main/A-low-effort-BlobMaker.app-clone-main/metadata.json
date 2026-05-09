@@ -1,0 +1,5 @@
+{
+  "name": "Blob Physics Simulator",
+  "description": "Simulador de massa dinâmico e interativo com conservação de volume e integração de Verlet.",
+  "requestFramePermissions": []
+}

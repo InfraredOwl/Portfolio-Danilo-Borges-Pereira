@@ -1,0 +1,27 @@
+{
+  "entities": {
+    "BlobPreset": {
+      "title": "Blob Preset",
+      "description": "Uma configuração salva de um blob.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome do preset" },
+        "color": { "type": "string", "description": "Cor hexadecimal" },
+        "complexity": { "type": "number", "description": "Número de vértices" },
+        "contrast": { "type": "number", "description": "Nível de contraste/distorção" },
+        "stiffness": { "type": "number", "description": "Rigidez da física" },
+        "gravityEnabled": { "type": "boolean", "description": "Se a gravidade estava ativa" },
+        "authorId": { "type": "string", "description": "UID do criador" },
+        "authorName": { "type": "string", "description": "Nome do criador" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de criação" }
+      },
+      "required": ["name", "color", "complexity", "contrast", "stiffness", "authorId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/presets/{presetId}": {
+      "schema": "BlobPreset",
+      "description": "Coleção global de presets de blobs compartilhados pela comunidade."
+    }
+  }
+}

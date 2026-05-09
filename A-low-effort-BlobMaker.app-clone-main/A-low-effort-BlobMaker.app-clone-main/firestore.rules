@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(authorId) {
+      return isSignedIn() && request.auth.uid == authorId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 1. Validation Blueprint for BlobPreset
+    function isValidBlobPreset(data) {
+      return data.keys().hasAll(['name', 'color', 'complexity', 'contrast', 'stiffness', 'authorId', 'createdAt'])
+        && data.keys().size() <= 9 // schema has 9 keys (including optional authorName/gravityEnabled)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.color is string && data.color.matches('^#[0-9a-fA-F]{6}$')
+        && data.complexity is int && data.complexity >= 6 && data.complexity <= 40
+        && data.contrast is number && data.contrast >= 0 && data.contrast <= 10
+        && data.stiffness is number && data.stiffness >= 1 && data.stiffness <= 10
+        && data.authorId == request.auth.uid
+        && data.createdAt == request.time
+        && (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100))
+        && (!('gravityEnabled' in data) || (data.gravityEnabled is bool));
+    }
+
+    // --- Collections ---
+
+    match /presets/{presetId} {
+      // 3. Path Variable Hardening
+      allow get: if isValidId(presetId);
+      
+      // 8. Secure List Queries
+      // A galeria é pública para visualização (read-only para visitantes)
+      allow list: if true; 
+
+      allow create: if isSignedIn() 
+        && isValidId(presetId) 
+        && isValidBlobPreset(incoming());
+
+      allow update: if isOwner(existing().authorId)
+        && isValidBlobPreset(incoming())
+        && incoming().createdAt == existing().createdAt // 9. Immortal Field
+        && incoming().authorId == existing().authorId   // Identidade Imutável
+        && (
+          // Action: Edit Name/Description
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'color', 'complexity', 'contrast', 'stiffness', 'gravityEnabled', 'authorName'])
+        );
+
+      allow delete: if isOwner(existing().authorId);
+    }
+  }
+}
